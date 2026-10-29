@@ -1,11 +1,11 @@
 # 发布到 GitHub：传什么、不传什么
 
-> 结论先给：**16 个文件，约 650KB**。主文件一个，其余全是文档和测试。
+> 结论先给：**22 个文件，约 1.6MB**（其中 930KB 是四张截图）。主文件一个，其余全是文档和测试。
 > 个人数据、历史版本、内部判定清单**物理隔离**在 `.private/` 和 `_archive/`，`.gitignore` 已经拦住。
 
 ---
 
-## 一、上传清单（16 个文件）
+## 一、上传清单（22 个文件）
 
 | # | 文件 | 大小 | 为什么传 |
 |---|---|---|---|
@@ -23,7 +23,10 @@
 | 12 | `tests/probe-xss.mjs` | 3KB | 3 种 XSS 载荷 × 8 页 |
 | 13 | `tests/verify-file.mjs` | 15KB | 存档文件镜像 23 项 |
 | 14 | `tests/verify-visual.mjs` | 4KB | 像素级外观回归 |
-| 15–16 | `package.json` + `.gitignore` | 1KB | 测试只依赖 `playwright-core`；`.gitignore` 是隐私边界本身，必须入库 |
+| 15 | `package.json` + `.gitignore` | 1KB | 测试只依赖 `playwright-core`；`.gitignore` 是隐私边界本身，必须入库 |
+| 16 | `LICENSE` | 1KB | MIT |
+| 17–20 | `docs/assets/{cockpit,sail,treasure,finance}.png` | 930KB | README 首屏证据。**里面是虚构数据**，由 `scripts/shots.mjs` 在临时浏览器配置里生成 |
+| 21 | `scripts/shots.mjs` | 9KB | 重拍截图的脚本（别人想换截图自己跑） |
 
 **依赖只有一个**：`playwright-core`（跑测试用，不是运行时依赖）。别人 clone 下来 `npm i` 就能跑 `npm test`。
 
@@ -52,7 +55,7 @@
 grep -rn "avf6AYAE\|qVNvf5ur\|14652\|C:\\\\Users" --include="*.md" --include="*.html" --include="*.mjs" .  \
   --exclude-dir=node_modules --exclude-dir=.private --exclude-dir=_archive
 
-# ② 数量核对：应该是 16
+# ② 数量核对：应该是 22
 git add -An | wc -l
 
 # ③ 体积核对：主文件约 610KB，整个仓库 < 1MB
@@ -105,11 +108,15 @@ git push -u origin main
 
 ---
 
-## 六、还没决定的（发布前你可以拍板）
+## 六、已定的三件事（2026-10-29）
 
-| 事项 | 现状 | 建议 |
-|---|---|---|
-| **LICENSE** | 没有。README 写「待定，保留所有权利」 | 没有 LICENSE 时法律上默认全保留——想让人用就选一个：MIT（最宽松）/ 或自定义「源码可见，禁止商用与二次分发」 |
-| **仓库名** | — | `sea-workbench`（与 package.json 一致）。避免只用 `sea`：Sea Limited（冬海集团）已占 `sea.com` 与企业级品牌 |
-| **是否公开 `docs/audit/`** | 建议公开 | 它自曝了一堆未修缺陷，但「敢公开自己的缺陷清单」本身就是可信度 |
-| **截图** | README 里两行注释占位 | 需要**空白盘 + 自己录的假数据**截图，不能用真实存档截图 |
+| 事项 | 结论 |
+|---|---|
+| **LICENSE** | **MIT**。版权行现在是「Sea-人生看板 作者」，想署真名就改 `LICENSE` 第一段 |
+| **对外名字** | **Sea-人生看板**。GitHub 仓库名只能用 ASCII，建议 `sea-life-board`（与 `package.json` 一致）；中文名写进仓库 Description 与 README 标题 |
+| **截图** | 已生成 4 张在 `docs/assets/`，数据全虚构。要重拍：`node scripts/shots.mjs` |
+
+## 七、还剩的一件小事：页内标题
+
+`Sea-2.8.html` 里的 `<title>` 目前是 `Sea · 海图台（8 页）`，侧栏品牌是 `Sea`。
+对外叫「Sea-人生看板」之后这两处不一致，但**改它意味着升版本号 + 重新给线上打补丁**（`docs/HOSTING.md` 的那套流程），所以单独列在这里，等你决定什么时候一起做。
