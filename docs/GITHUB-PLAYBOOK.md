@@ -76,9 +76,61 @@ Pages 在 push 后 1 分钟内自动重建。改完立刻刷新看不到新版�
 | 脚本第 ④ 步报三版不对齐 | 02 落后于 01 | `npm run export` 再 `npm run sync` |
 | 第 ⑥ 步说 tag 已存在 | 同一个版本号发第二次 | 推荐升版本号；确实要重发：`gh release delete vX --yes`（tag 会留着，别删） |
 | 忘了 `gh auth login` | 新电脑 | `gh auth login` → 选 HTTPS → 浏览器授权 → `gh auth setup-git` |
-| push 报 `CONNECT tunnel failed, response 502` | 本地代理间歇故障，和仓库无关 | 重试几次（`git ls-remote origin refs/heads/main` 能返回 SHA 就说明通了）。别急着重装 git |
+| push 报 `CONNECT tunnel failed, response 502` | 本地代理间歇故障，和仓库无关 | 重试几次（`git ls-remote origin refs/heads/main` 能返回 SHA 就说明通了）。别急着重装 git。**连续 8 次都不通就走下面「代理彻底不通」的 API 通道** |
+| push 报 `schannel: server closed abruptly` | 同上，Windows 的 TLS 后端换了说法 | 加 `-c http.sslBackend=openssl` 能看清真实错误（通常露出的还是 502 CONNECT） |
 | 提交显示匿名头像、不关联账号 | `user.email` 不是 GitHub 认得的邮箱 | 见下面「提交身份」，改完只影响之后的提交，历史里的不会变 |
 | 误把敏感文件推上去了 | — | 立刻 `git rm --cached <文件>` + commit + `npm run release`。**如果还留在历史提交里，停下来找人，不要自己 rewrite 历史** |
+| push 后本地和 `origin/main` 显示两个不同的提交 ID | 走 API 上传时 GitHub 会重算提交对象（message 尾换行不带），内容一样、ID 不同 | **别 force push**。用下面「对齐 SHA」的方法把远程对象精确复现到本地库 |
+
+---
+
+## 代理彻底不通时：用 API 上传（已验证可行）
+
+判断标准：`gh api rate_limit` 正常返回，但 `git push` / `git ls-remote` 连续失败。这说明 **API 通道（api.github.com）通，git 通道（github.com）的 CONNECT 被代理挡了**。别重装 git，换通道。
+
+**能这么做的原因**：仓库内容早就存在服务端，只需要重建「哪些文件 + 谁在什么时候提交」。改动文件逐个建 blob → 建一棵基于旧树的新树 → 建提交 → 移动分支指针。
+
+```bash
+# 四个文件为例，脚本在 /tmp 里临时生成即可，不必入库
+# ① POST /git/blobs     每个改动文件（content: base64, encoding: base64）
+# ② POST /git/trees     base_tree = 远程现有树的 sha，tree = 四个 {path,mode,type,sha}
+# ③ POST /git/commits   message + tree + parents:[远程 HEAD] + author/committer
+# ④ PATCH /git/refs/heads/main  {sha, force:true}
+```
+
+**两个必须做的校验**（少一个都可能悄悄推错）：
+
+1. 每个 blob 的 sha 要等于 `git rev-parse HEAD:<path>` —— 有个不对就是编码或换行搞错了
+2. 新树的 sha 要等于 `git rev-parse HEAD^{tree}` —— 不等就说明有文件没传对
+
+### 对齐 SHA：本地和远程必须是同一个提交
+
+走 API 上传后，提交 ID 会跟本地不同。原因已经查清：**GitHub 保留原时区（`+0800`），但把 message 末尾的换行去掉**；而 `git commit` 会在 message 末尾留一个换行。差这一个字节，哈希就全变。
+
+修复办法是把远程对象精确复现进本地库（不需要网络，也不需要 fetch）：
+
+```bash
+# 用 hash-object 构造与远程逐字节相同的 commit 对象，匹配后把分支指过去
+git hash-object -t commit -w --stdin   # 内容见下，注意 message 末尾【没有】换行
+git update-ref refs/heads/main <sha>
+git update-ref refs/remotes/origin/main <sha>
+```
+
+对象的准确形态（`+0800` 不能换成 `+0000`，末尾不能多空行）：
+
+```
+tree <远程树 sha>
+parent <父提交 sha>
+author Mason <205913954+Mason-yu-28@users.noreply.github.com> <unix时间戳> +0800
+committer Mason <205913954+Mason-yu-28@users.noreply.github.com> <unix时间戳> +0800
+
+<提交信息，不带尾换行>
+```
+
+先 `git hash-object -t commit --stdin`（**不带 `-w`**）试算，与远程 SHA 一致再加 `-w` 写入。不一致就说明日期或时区猜错了，别硬写。
+
+**为什么不 force push**：一来 git 通道本来就是坏的；二来强推会造出第三份历史。API 上传 + 精确复现对象的结果是本地远程同一个 ID，下次能正常 push。
+
 
 ---
 

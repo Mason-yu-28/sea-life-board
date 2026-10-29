@@ -10,7 +10,9 @@
     "export": "node scripts/export-public.mjs",
     "sync": "node scripts/sync-check.mjs",
     "release": "node scripts/release.mjs",
-    "release:dry": "node scripts/release.mjs --dry"
+    "release:dry": "node scripts/release.mjs --dry",
+    "push:api": "node scripts/api-push.mjs",
+    "push:api:dry": "node scripts/api-push.mjs --dry"
   },
   "devDependencies": {
     "playwright-core": "^1.49.0"
