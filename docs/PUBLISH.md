@@ -1,6 +1,6 @@
 # 发布到 GitHub：传什么、不传什么
 
-> 结论先给：**27 个文件，约 1.8MB**（其中 930KB 是四张截图）。主文件一个，其余全是文档、测试和脚本。
+> 结论先给：**29 个文件，约 1.9MB**（其中 930KB 是四张截图）。主文件一个，其余全是文档、测试和脚本。
 > 个人数据、历史版本、内部判定清单**物理隔离**在 `.private/` 和 `_archive/`，`.gitignore` 已经拦住。
 
 ---
@@ -19,6 +19,7 @@
 | `docs/DESIGN.md` | 9KB | 设计取舍：为什么单文件、数据模型、派生卡为什么不回写源、已踩的坑、技术债 |
 | `docs/HOSTING.md` | 11KB | 三个版本的关系 + 同步纪律 + 线上更新流程（节点 ID 已换成占位符） |
 | `docs/PUBLISH.md` | 本文件 | 发布清单 + 上传前 7 项检查，给未来的自己看 |
+| `docs/GITHUB-PLAYBOOK.md` | 5KB | 一页纸发布手册：日常发版 5 步 + 出问题对照表。作者本人最常翻的一份 |
 | `docs/REPO-TEXT.md` | 4KB | 仓库级文案：About 描述 / Topics / Release 正文 / 社交预览图规格 |
 | `docs/audit/AUDIT-01-代码地图.md` | 14KB | 万行单文件怎么读——公开这个，等于先回答了「你自己看得懂吗」 |
 | `docs/audit/AUDIT-02-文档与实现偏差.md` | 8KB | 文档与代码对不上的地方，诚实记录 |
@@ -32,6 +33,7 @@
 | `LICENSE` | 1KB | MIT |
 | `docs/assets/{cockpit,sail,treasure,finance}.png` | 930KB | README 首屏证据。**里面是虚构数据**，由 `scripts/shots.mjs` 在临时浏览器配置里生成 |
 | `scripts/shots.mjs` | 11KB | 重拍截图的脚本（别人想换截图自己跑） |
+| `scripts/release.mjs` | 8KB | 一条命令发布：核对版本 → 导出 → 校验 → push → tag → Release。检查不过就中止 |
 | `scripts/export-public.mjs` | 6KB | 从 git 白名单导出「发布版」。想让「产物与源」保持一致的人会看它 |
 | `scripts/sync-check.mjs` | 9KB | 只读校验三版是否对齐（作者自用；公开也算透明） |
 

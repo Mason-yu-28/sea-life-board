@@ -129,18 +129,21 @@ python -m http.server 8080
 
 ```
 Sea-2.8.html          主文件，1 万行，全部代码在这里
+index.html            在线试用入口（GitHub Pages 首页，跳转到主文件）
 LICENSE               MIT
 CHANGELOG.md          版本史（v1.0.0 → v2.10.0，含每次事故的根因复盘）
-package.json          只有 test 脚本和一个 devDependency，没有构建
+package.json          只有 test / release 脚本，没有构建
 docs/
   GUIDE.md            使用说明（零基础可读，从打开写到复盘）
   DESIGN.md           设计取舍：数据模型、存储分层、为什么单文件
+  GITHUB-PLAYBOOK.md  一页纸发布手册：日常发版 5 步 + 出问题对照表
   HOSTING.md          多个版本的关系、同步纪律、线上更新流程
   PUBLISH.md          发布前该传什么、不该传什么
   REPO-TEXT.md        仓库文案：About 描述 / Topics / Release 说明
   assets/             README 用的截图（虚构数据）
   audit/              体检底稿：代码地图 / 文档与实现偏差 / 缺陷与风险清单
 scripts/
+  release.mjs         一条命令发布（核对 → 导出 → 校验 → push → tag → Release）
   export-public.mjs   从 git 白名单导出对外发布版
   sync-check.mjs      只读校验多个版本是否对齐
   shots.mjs           重新生成上面那些截图
