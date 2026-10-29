@@ -76,7 +76,24 @@ Pages 在 push 后 1 分钟内自动重建。改完立刻刷新看不到新版�
 | 脚本第 ④ 步报三版不对齐 | 02 落后于 01 | `npm run export` 再 `npm run sync` |
 | 第 ⑥ 步说 tag 已存在 | 同一个版本号发第二次 | 推荐升版本号；确实要重发：`gh release delete vX --yes`（tag 会留着，别删） |
 | 忘了 `gh auth login` | 新电脑 | `gh auth login` → 选 HTTPS → 浏览器授权 → `gh auth setup-git` |
+| push 报 `CONNECT tunnel failed, response 502` | 本地代理间歇故障，和仓库无关 | 重试几次（`git ls-remote origin refs/heads/main` 能返回 SHA 就说明通了）。别急着重装 git |
+| 提交显示匿名头像、不关联账号 | `user.email` 不是 GitHub 认得的邮箱 | 见下面「提交身份」，改完只影响之后的提交，历史里的不会变 |
 | 误把敏感文件推上去了 | — | 立刻 `git rm --cached <文件>` + commit + `npm run release`。**如果还留在历史提交里，停下来找人，不要自己 rewrite 历史** |
+
+---
+
+## 提交身份（别改坏）
+
+这台机器的全局配置已经是：
+
+```bash
+git config --global user.name  "Mason"
+git config --global user.email "205913954+Mason-yu-28@users.noreply.github.com"
+```
+
+那个 `205913954+Mason-yu-28@users.noreply.github.com` 是 GitHub 给的**专用 noreply 邮箱**，格式是「你的账号 ID + 用户名」。用它提交，GitHub 才认得出这些提交属于你，同时不暴露真实邮箱。
+
+**不要换成自己的常用邮箱**：一样能关联（前提是邮箱已验证），但会把邮箱写进每一条公开提交里，而这样做没有任何额外好处。
 
 ---
 
