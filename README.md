@@ -67,10 +67,13 @@ python -m http.server 8080
 |---|---|
 | `localStorage` 的 `sea_workspace_v1` | 主数据（目标、卡、流水、统计），约 10KB。**唯一真源** |
 | `localStorage` 的 `sea_assets_v1` | 附件（封面、简历、凭证），base64 |
-| `localStorage` 的 `sea_snap_main` / `sea_snap_assets` | 每次启动前的本机快照，出事了能捞一把 |
-| IndexedDB 的 `sea_file_db` | 只存一个东西：你绑定的那个文件的句柄 |
-| 你绑定的 `sea-存档.json` | **可选**，实时副本。跟「导出备份」同一个格式，可直接被导入 |
+| `localStorage` 的 `sea_snap_main` / `sea_snap_assets` / `sea_snap_at` | 每次启动前的本机快照，出事了能捞一把 |
+| `localStorage` 的 `sea_force_local` | 一个开关：强制只看本机、跳过云端拉取 |
+| IndexedDB 的 `sea_file_db` | 只存一个东西：你绑定的那个文件的句柄（不是数据本身） |
+| 你绑定的 `sea-存档.json` | **可选，默认不存在**。实时副本，跟「导出备份」同一个格式，可直接被导入 |
 | 云端 | 可选，仅宿主支持时才有。主数据一条 + 附件按 600KB 分 4 片 |
+
+**一句话：默认状态下它不往你的磁盘写任何文件；唯一会持续更新的文件，是你自己在设置里指定的那一个。**
 
 **四条你必须知道的**：
 
@@ -99,11 +102,14 @@ LICENSE               MIT
 CHANGELOG.md          版本史（含每次事故的根因复盘）
 docs/
   GUIDE.md            使用说明（零基础可读）
-  HOSTING.md          两份构建的差异 + 线上更新纪律
+  HOSTING.md          三个版本的关系 + 同步纪律 + 线上更新操作流程
   PUBLISH.md          发布前该传什么、不该传什么
   assets/             README 用的截图（虚构数据）
   audit/              体检底稿：代码地图 / 文档偏差 / 缺陷清单
-scripts/shots.mjs     重新生成上面那些截图
+scripts/
+  export-public.mjs   从 git 白名单导出「GitHub 发布版」
+  sync-check.mjs      只读校验三个版本是否对齐
+  shots.mjs           重新生成上面那些截图
 tests/                回归脚本（node 直接跑，见 §已知局限）
 ```
 

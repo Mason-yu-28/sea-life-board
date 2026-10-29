@@ -48,32 +48,38 @@
 
 ---
 
-## 三、上传前必做的 6 项检查
+## 三、上传前必做的 7 项检查
 
 ```bash
-# ① 敏感串扫描：这四条必须全部无输出（SENSITIVE-REVIEW.md 本身除外，它不入库）
-grep -rn "avf6AYAE\|qVNvf5ur\|14652\|C:\\\\Users" --include="*.md" --include="*.html" --include="*.mjs" .  \
+# ① 敏感串扫描：不得出现库 ID / 页面节点 ID / 本机绝对路径
+#    真值写在 .private/grep-keys.txt（这个文件本身不入库，所以扫描式里看不见真值）
+grep -rEnf .private/grep-keys.txt --include="*.md" --include="*.html" --include="*.mjs" .  \
   --exclude-dir=node_modules --exclude-dir=.private --exclude-dir=_archive
 
-# ② 数量核对：应该是 22
-git add -An | wc -l
+# ② 数量核对：git 里的文件数 == 02 目录里的文件数
+git ls-files | wc -l && find ../02-GitHub发布版 -type f | wc -l
 
-# ③ 体积核对：主文件约 610KB，整个仓库 < 1MB
+# ③ 体积核对：主文件约 600KB，整个仓库 < 2MB
 ls -lh Sea-2.8.html && du -sh .git
 
-# ④ 版本号一致：三处都应显示 2.10.0
+# ④ 版本号一致：三处都应显示同一版本
 grep -m1 '"version"' package.json
 grep -o 'id="setVerNum">[^<]*' Sea-2.8.html
 head -3 CHANGELOG.md
 
-# ⑤ 测试全绿
+# ⑤ 测试全绿（第一条就是 verify-blank，同时兜住「首启空白」这一项）
 npm i && npm test
 
-# ⑥ 首启空白（防止把示例数据带出去）
-npm test   # 里面第一条就是 verify-blank
+# ⑥ 三版同步：02 = 01 的 HEAD、03 版本号 = 01、平台注入特征在位
+node scripts/sync-check.mjs
+
+# ⑦ 02 是否需要重新导出（--dry 只报告，不写盘）
+node scripts/export-public.mjs --dry
 ```
 
-六项任一不过，不要 push。
+七项任一不过，不要 push。
+
+> **02 什么时候必须重导**：只要动了 `git ls-files` 白名单里的任何文件。判断方法就一条 —— `node scripts/export-public.mjs --dry` 说有差异，就重导一次。反过来，02 目录里的东西**永远不要手改**：下次导出会整份覆盖。
 
 ---
 
