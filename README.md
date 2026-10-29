@@ -214,7 +214,7 @@ docs/
   REPO-TEXT.md        仓库文案：About / Topics / Release
   assets/             README 用的截图（虚构数据）
   audit/              体检底稿：代码地图 / 文档偏差 / 缺陷清单
-scripts/              export-public · sync-check · release · shots
+scripts/              export-public · sync-check · release · api-push · shots
 tests/                回归脚本，npm test 一条跑完
 ```
 
