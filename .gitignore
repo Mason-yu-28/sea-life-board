@@ -1,0 +1,43 @@
+# ============================================
+# Sea · 公开仓库忽略规则
+# 原则：代码与文档入库，个人数据一律不入库
+# 结构：根目录 = 可公开的部分；.private/ 与 _archive/ 物理隔离
+# ============================================
+
+# —— 私有区（整个目录物理隔离，这是硬边界）——
+# 内含：真实数据 JSON、原图备份、设计文档（引擎层 00-09 + 实例层 10-15/90）、
+#       31 个历史版本、含真实数据的截图
+.private/
+
+# —— 归档区（历史草稿，永不入库）——
+_archive/
+
+# —— 兜底规则 ——
+# 上面两条已经覆盖；以下保留是为了万一文件被移到根目录时仍然拦住
+Sea-数据-*.json
+Sea-原图备份-*.json
+*.json.bak
+Sea-备份/
+*.bak.html
+Sea-skin-preview*.html
+Sea-cockpit-preview.html
+Sea-设计文档/
+shots/
+.newjs.txt
+.workbuddy/
+.tmp_library/
+
+# —— 敏感判定清单，只给本人看 ——
+docs/SENSITIVE-REVIEW.md
+
+# —— 依赖与产物 ——
+node_modules/
+package-lock.json
+tests/output/
+*.log
+.DS_Store
+Thumbs.db
+
+# —— 编辑器 ——
+.vscode/
+.idea/

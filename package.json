@@ -1,0 +1,13 @@
+{
+  "name": "sea-workbench",
+  "version": "2.10.0",
+  "private": true,
+  "description": "Sea · 人生工作台 —— 单文件个人看板",
+  "scripts": {
+    "test": "node tests/verify-blank.mjs && node tests/verify-fixes.mjs && node tests/probe-xss.mjs && node tests/verify-file.mjs",
+    "test:visual": "node tests/verify-visual.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}
