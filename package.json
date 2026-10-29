@@ -6,7 +6,11 @@
   "description": "Sea · 人生工作台 —— 单文件个人看板",
   "scripts": {
     "test": "node tests/verify-blank.mjs && node tests/verify-fixes.mjs && node tests/probe-xss.mjs && node tests/verify-file.mjs",
-    "test:visual": "node tests/verify-visual.mjs"
+    "test:visual": "node tests/verify-visual.mjs",
+    "export": "node scripts/export-public.mjs",
+    "sync": "node scripts/sync-check.mjs",
+    "release": "node scripts/release.mjs",
+    "release:dry": "node scripts/release.mjs --dry"
   },
   "devDependencies": {
     "playwright-core": "^1.49.0"
