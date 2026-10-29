@@ -1,11 +1,11 @@
 # 发布到 GitHub：传什么、不传什么
 
-> 结论先给：**22 个文件，约 1.6MB**（其中 930KB 是四张截图）。主文件一个，其余全是文档和测试。
+> 结论先给：**24 个文件，约 1.8MB**（其中 930KB 是四张截图）。主文件一个，其余全是文档、测试和脚本。
 > 个人数据、历史版本、内部判定清单**物理隔离**在 `.private/` 和 `_archive/`，`.gitignore` 已经拦住。
 
 ---
 
-## 一、上传清单（22 个文件）
+## 一、上传清单（24 个文件）
 
 | # | 文件 | 大小 | 为什么传 |
 |---|---|---|---|
@@ -13,8 +13,8 @@
 | 2 | `README.md` | 6KB | 门面。别人点进来 30 秒决定要不要看下去 |
 | 3 | `CHANGELOG.md` | 54KB | **这个项目最值钱的文档**：每次事故的根因复盘。已脱敏 |
 | 4 | `docs/GUIDE.md` | 13KB | 使用说明。陌生人从这里开始，不用读别的 |
-| 5 | `docs/HOSTING.md` | 8KB | 两份构建的差异 + 线上更新纪律（节点 ID 已换成占位符） |
-| 6 | `docs/PUBLISH.md` | 本文件 | 发布清单，给未来的自己看 |
+| 5 | `docs/HOSTING.md` | 11KB | 三个版本的关系 + 同步纪律 + 线上更新流程（节点 ID 已换成占位符） |
+| 6 | `docs/PUBLISH.md` | 本文件 | 发布清单 + 上传前 7 项检查，给未来的自己看 |
 | 7 | `docs/audit/AUDIT-01-代码地图.md` | 14KB | 万行单文件怎么读——公开这个，等于先回答了「你自己看得懂吗」 |
 | 8 | `docs/audit/AUDIT-02-文档与实现偏差.md` | 8KB | 文档与代码对不上的地方，诚实记录 |
 | 9 | `docs/audit/AUDIT-03-缺陷与风险清单.md` | 18KB | 缺陷台账（含已修/未修）。自曝短板，但也是可信度来源 |
@@ -26,7 +26,9 @@
 | 15 | `package.json` + `.gitignore` | 1KB | 测试只依赖 `playwright-core`；`.gitignore` 是隐私边界本身，必须入库 |
 | 16 | `LICENSE` | 1KB | MIT |
 | 17–20 | `docs/assets/{cockpit,sail,treasure,finance}.png` | 930KB | README 首屏证据。**里面是虚构数据**，由 `scripts/shots.mjs` 在临时浏览器配置里生成 |
-| 21 | `scripts/shots.mjs` | 9KB | 重拍截图的脚本（别人想换截图自己跑） |
+| 21 | `scripts/shots.mjs` | 11KB | 重拍截图的脚本（别人想换截图自己跑） |
+| 22 | `scripts/export-public.mjs` | 6KB | 从 git 白名单导出「发布版」。想让「产物与源」保持一致的人会看它 |
+| 23 | `scripts/sync-check.mjs` | 9KB | 只读校验三版是否对齐（作者自用；公开也算透明） |
 
 **依赖只有一个**：`playwright-core`（跑测试用，不是运行时依赖）。别人 clone 下来 `npm i` 就能跑 `npm test`。
 
