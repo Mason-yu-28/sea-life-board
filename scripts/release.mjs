@@ -137,6 +137,15 @@ else {
 // ── 7. 结果 ────────────────────────────────────────────────────────
 step('结果');
 const repo = trySh('gh', ['repo', 'view', '--json', 'url,homepageUrl', '--jq', '.url + " " + (.homepageUrl // "")']);
-if (repo.ok) repo.out.split(' ').filter(Boolean).forEach(u => console.log(`  ${u}`));
-console.log(`  ${C.d}Pages 会在 push 后 1 分钟内自动重建；看板地址 <homepageUrl>/Sea-2.8.html${C.x}`);
+if (repo.ok) {
+  const [url, home] = repo.out.split(' ');
+  console.log(`  仓库  ${url}`);
+  if (home) {
+    console.log(`  试用  ${home}`);
+    console.log(`  看板  ${home.replace(/\/$/, '')}/Sea-2.8.html`);
+  } else {
+    console.log(`  ${C.d}没有设置 Website，跳过试用地址${C.x}`);
+  }
+}
+console.log(`  ${C.d}Pages 会在 push 后 1 分钟内自动重建。${C.x}`);
 if (DRY) console.log(`\n${C.y}dry-run 结束，什么都没改。${C.x}`);
