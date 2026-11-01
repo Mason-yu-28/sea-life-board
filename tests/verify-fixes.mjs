@@ -147,6 +147,46 @@ const probeSrc = (src.match(/function storeProbe\(\)\{[\s\S]*?\n\}/) || [''])[0]
 check('存储探针 · 只在成功时缓存结果', /if\(_storeOK===true\) return true/.test(probeSrc) && !/_storeOK!==null/.test(probeSrc),
   probeSrc ? '实现已改为「成功才缓存」' : '没找到 storeProbe');
 
+// ——— 6.5 财务海域（v2.11.0）
+// 导入账单的「取消」曾经点了没反应：它的 id 和岛屿卡弹窗的取消按钮撞了车，
+// getElementById 拿到的是别人家那个，真正那个从头到尾没被绑过。
+const cancel = await page.evaluate(() => {
+  document.querySelector('[data-nav="finance"]').click();
+  document.getElementById('importBill').click();
+  const opened = document.querySelectorAll('.fin-import-modal').length;
+  const btn = [...document.querySelectorAll('.fin-import-modal .modal-foot button')]
+    .find(b => b.textContent.trim() === '取消');
+  if (btn) btn.click();
+  return { opened, left: document.querySelectorAll('.fin-import-modal').length };
+});
+check('导入账单 · 取消能关掉弹窗', cancel.opened === 1 && cancel.left === 0,
+  `打开 ${cancel.opened} 个 → 取消后 ${cancel.left} 个`);
+
+// 消费曲线「月内」翻月：翻到上个月 → 天数/合计跟着走 → 翻回本月且不能继续往后
+const mon = await page.evaluate(() => {
+  const d = new Date();
+  const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const pd = new Date(d.getFullYear(), d.getMonth() - 1, 1);
+  const prev = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
+  const seg = document.getElementById('finMonthSeg');
+  if (!seg) return { err: '没有月份切换条' };
+  const val = () => document.getElementById('finMonthVal').textContent;
+  const atNow = val();
+  seg.querySelector('[data-d="-1"]').click();
+  const afterPrev = val();
+  const legend = (document.getElementById('finChart').textContent || '').replace(/\s+/g, '');
+  seg.querySelector('[data-d="1"]').click();
+  const back = val();
+  return { atNow, ym, prev, afterPrev, back, legend, nxOff: seg.querySelector('[data-d="1"]').disabled,
+    prevLabel: `${prev.slice(0, 4)}年${+prev.slice(5, 7)}月` };
+});
+check('消费曲线 · 月内能翻到上个月再翻回来',
+  !mon.err && mon.atNow === mon.ym && mon.afterPrev === mon.prev && mon.back === mon.ym,
+  mon.err || `${mon.atNow} → ${mon.afterPrev} → ${mon.back}`);
+check('消费曲线 · 翻月后合计按所选月份', !mon.err && mon.legend.includes(mon.prevLabel),
+  mon.err || `图例：${(mon.legend || '').slice(0, 40)}`);
+check('消费曲线 · 停在本月时不再给往后翻', !mon.err && mon.nxOff === true, mon.err || `› ${mon.nxOff ? '已禁用' : '仍可点'}`);
+
 // ——— 7. 八个视图 + 控制台
 check('运行期 · 没有未捕获异常', errs.length === 0, errs.join(' | '));
 

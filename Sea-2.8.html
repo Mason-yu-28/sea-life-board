@@ -4,7 +4,7 @@
 <!-- Sea v2.8 · 2026-10-22 · ①存档拆开存（附件分片进 assets0..3，主数据约 10KB）②设置里加「本机存档」+ 一键切到只用本机；旧 v2.8.0/v2.8.1 合并；备注 · 设置里加「本机存档」+ 一键切到只用本机；v2.8.0 · 2026-10-22 · 附件与主数据分离：封面/简历/凭证按 600KB 分片存进 assets0..3，主数据永远小；v2.7.0 · 2026-10-22 · 训练统计改成按「天」：本周训练 = 练成天数 / 有安排天数（一天排几张都只算一天），热力图也是「那天这个部位全做完」才点亮；v2.6.0 · 2026-10-22 · 统计只认「练完」：热力图只点亮已完成（排了没做不算，鼠标停着仍能看到欠什么），本周训练与预警也只看完成；另外三个渲染出口（日历/岛屿池/航线池）统一补 save()，拖拽排期、右键排入、标记完成这些「只改内存就重画」的入口不会再因为 3 秒空窗丢数据；v2.5.1 · 2026-10-22 · 拖拽排期立刻落盘（原来只靠 3s 兜底，中途刷新会把排期丢掉、卡悄悄回卡池）、勾完成顺手刷健康页、热力图把「没有部位」的健康卡归到「其他」行、本周训练 hover 列出这一周算进来的卡；v2.5.0 · 2026-10-22 · 训练部位不再限定健康海域：健身内容挂在成长目标上时也能标部位，于是健康域的今日/热力图/本周训练都认它（流水同时照旧进成长）；v2.4.2 · 2026-10-21 · 健康「本周训练」加今日小字（今天 x/y，没排期直接说），训练卡判据改成「有部位 或 属健康海域」的并集，与热力图不再各算一套；v2.4.1 · 2026-10-21 · 热力图进页就把今天摆到中间（原来窗口从 5 周前起算，今天在第 31 列、在屏幕外，看着像没记录）；v2.4.0 · 2026-10-21 · 点击涟漪恢复正圆、仪表盘补成完整田字、日程里删卡只撤这次排期、影音观赏无框整封面且拖动不再被浏览器当文件拖、星级筛选补全 1–5、岛屿卡目标量只在铸造层出现、全站去掉输入框示例占位；v2.3.0 · 2026-10-21 · 航行日程按样张重做（七格细线、日期两行压线、卡改纸片：左侧脊线 + 第二行小字）；影音新增「观赏」（点卡片进 3D 展柜，与成就卡同一套）；v2.2.0 · 2026-10-21 · 职业/健康/航行三域收口（角色卡白底、指标五行、热力图日历、日程日期一19、专线环线两个蓝、航行卡说明栏）；v2.0.3 · 2026-10-19 · 金额输入框「记一笔」落回源文件：白底长条框 + ¥ 海青徽标（v12 改造此前只改线上未落盘，再发布即被源文件覆盖）；v2.0.2 = 修财务饼图丢数据；v2.0.1 = 修云端同步刷屏；v2.0.0 = 手机端底部 7 Tab + 全站单列 + 点击弹菜单（代右键）；v1.1.0 = 数据上云双端同步；v1.0.5 = 更名版本号机制；v1.0.4 = 存档提示文案指向发布链接；v1.0.3 = 存档探针；v1.0.2 = 修热力图四处渲染错位；v1.0.1 = 热力图改回横轴日历；v1.0 = 12 条大改。历史版本在 Sea-备份/ -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="version" content="2.10.0">
+<meta name="version" content="2.11.0">
 <title>Sea-life-board</title>
 <style>
 :root{
@@ -675,6 +675,8 @@ body.alt-copy .route-slot .chip{cursor:copy}
 .fin-act button:hover{border-color:var(--plum);color:var(--plum);background:var(--plum-soft)}
 .fin-act button.pri{background:var(--plum);border-color:var(--plum);color:#fff}
 .fin-head-acts{display:flex;gap:8px;margin-left:auto}
+.fin-curve-head{flex-wrap:wrap;row-gap:6px}   /* 窄屏时按钮组整体换行，不挤成一列竖排 */
+.fin-curve-head .fin-head-acts{flex-wrap:wrap;justify-content:flex-end;row-gap:6px}
 .fin-btn{font-size:11.5px;padding:5px 13px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted);cursor:pointer;transition:.15s}
 .fin-btn:hover{border-color:var(--plum);color:var(--plum);background:var(--plum-soft)}
 .fin-btn.pri{background:var(--plum);border-color:var(--plum);color:#fff}
@@ -2992,7 +2994,7 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
       <!-- 右栏：消费曲线 / 消费结构 / 储蓄任务 / 待分类队列 /（流水 + 分类映射表 并列） -->
       <div class="fin-right">
         <div class="panel">
-          <div class="panel-head"><h2>消费曲线</h2>
+          <div class="panel-head fin-curve-head"><h2>消费曲线</h2>
             <span class="fin-head-acts">
               <span class="fin-seg sub" id="finGranSeg"></span>
               <span class="fin-seg" id="finChartSeg">
@@ -3000,6 +3002,9 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
               </span>
               <span class="fin-seg fin-year" id="finYearSeg" style="display:none">
                 <button type="button" data-d="-1">‹</button><b id="finYearVal"></b><button type="button" data-d="1">›</button>
+              </span>
+              <span class="fin-seg fin-year" id="finMonthSeg" style="display:none">
+                <button type="button" data-d="-1">‹</button><b id="finMonthVal"></b><button type="button" data-d="1">›</button>
               </span>
             </span>
           </div>
@@ -3330,7 +3335,7 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
       <button id="btnLocalMode">切到本机</button>
     </div>
     <div class="set-ver">
-      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.10.0</span></div>
+      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.11.0</span></div>
       <div class="sv-row"><span>云端同步</span><span class="sv-v" id="setCloudState">检测中…</span></div>
       <ul class="sv-log" id="setChangelog"></ul>
     </div>
@@ -3564,6 +3569,7 @@ let finFilter='all';// 流水分类筛选（持久化）
 let finChartMode='m';// 消费曲线范围：'w' 周内 / 'm' 月内 / 'y' 年内（持久化）
 let finChartGran='d';// 消费曲线粒度：'d' 按天 / '5' 按5天 / 'w' 按周 / 'mo' 按月（持久化，随范围切换）
 let finYear=0;// 消费曲线「年内」查看的年份（0=当前年，持久化）
+let finMonth='';// 消费曲线「月内」查看的月份 'YYYY-MM'（''=本月，持久化）
 let finSinceExport=0;// 距上次导出新增的笔数（≥20 时提醒备份）
 let finSeeded2=false;// 历史迁移标记（v2.9 起不再产生任何数据，保留只为读得懂旧存档）
 let bodies=[];     // 身体指标（体重 / 体脂 / 围度）
@@ -3587,7 +3593,7 @@ let blankStart=false;   // 空白存档标记：首次打开 / 点了「清空�
 const STATE_KEYS=['islands','sails','achieves','collects','works','routes','occMoves','occGone','occDone',
   'resumes','projects','pays','cvVersions','events','firms','thresholds','wageRecords','careerAchieves','myParams',
   'exps','incs','catMap','budgets','finBudget','finWhite','pendingTxns','savings','finDraft','finFilter',
-  'finChartMode','finChartGran','finYear','finSinceExport','finSeeded2',
+  'finChartMode','finChartGran','finYear','finMonth','finSinceExport','finSeeded2',
   'bodies','hlthHeight','hlthDraft','grwDraft','grows','materials','reviews','northStar','focusIslandId','blankStart',
   'northStarHistory','dashMode','achSort','achTime','achRarity'];
 const STATE_DEFAULTS={};
@@ -3644,7 +3650,7 @@ function storeProbe(){
 function buildData(){
   return { islands,sails,achieves,collects,works,routes,occMoves,occGone,occDone,
     resumes,projects,pays,cvVersions,events,firms,thresholds,wageRecords,careerAchieves,myParams,
-    exps,incs,catMap,budgets,finBudget,finWhite,pendingTxns,savings,finDraft,finFilter,finChartMode,finChartGran,finYear,finSinceExport,finSeeded2,
+    exps,incs,catMap,budgets,finBudget,finWhite,pendingTxns,savings,finDraft,finFilter,finChartMode,finChartGran,finYear,finMonth,finSinceExport,finSeeded2,
     bodies,hlthHeight,hlthDraft,grwDraft,grows,materials,reviews,northStar,focusIslandId,blankStart,
     northStarHistory,dashMode,achSort,achTime,achRarity };
 }
@@ -3799,6 +3805,7 @@ function hydrate(d){
   if(typeof finFilter!=='string') finFilter='all';
   if(finChartMode!=='w' && finChartMode!=='m' && finChartMode!=='y' && finChartMode!=='Y') finChartMode='m';
   finYear=Number(finYear)||0; if(finYear && (finYear<2000||finYear>2100)) finYear=0;
+  if(typeof finMonth!=='string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(finMonth)) finMonth='';
   if(['d','5','w','mo'].indexOf(finChartGran)<0) finChartGran = finChartMode==='y' ? 'mo' : 'd';
   finSinceExport=Number(finSinceExport)||0;
   return true;
@@ -7859,15 +7866,17 @@ function finMaSeries(values, k){
 // 按「范围 + 粒度」分箱，返回每个单位的消费额与明细（用于折线图）
 function finChartSeries(range, gran){
   const now=new Date(), ym=curYM(), curY=now.getFullYear();
-  const days=daysInMonth(now);
+  // 「月内」看哪个月：finMonth 空 = 本月。天数跟着所选月份走，否则翻到 2 月会多画两天
+  const selM=finMonth||ym, isCurM=(selM===ym);
+  const days= isCurM ? daysInMonth(now) : daysInMonth(new Date(+selM.slice(0,4), +selM.slice(5,7)-1, 1));
   const { budget:unitBudget, name:unitName }=finUnitBudget(gran);
-  const consume=finConsumeOf(ym);
+  const consume=finConsumeOf(selM);
 
   if(range==='w'){
     const monday=weekStart(0);
     const names=['一','二','三','四','五','六','日'];
     const units=names.map((n,i)=>({ label:n, name:'周'+n, sub:'', value:0, items:[] }));
-    consume.forEach(x=>{
+    finConsumeOf(ym).forEach(x=>{
       const diff=Math.round((new Date(String(x.date)+'T00:00:00')-monday)/86400000);
       if(diff<0||diff>6) return;
       units[diff].value+=x.amount; units[diff].items.push(x);
@@ -7892,8 +7901,8 @@ function finChartSeries(range, gran){
       const bi=bounds.findIndex(([s,e])=>d>=s&&d<=e); if(bi<0) return;
       units[bi].value+=x.amount; units[bi].items.push(x);
     });
-    const cur=bounds.findIndex(([s,e])=>now.getDate()>=s && now.getDate()<=e);
-    return { units, unitBudget, unitName, scopeText:'本月', xTicks:units.map((_,i)=>i), nowIdx:cur<0?units.length-1:cur };
+    const cur=isCurM ? bounds.findIndex(([s,e])=>now.getDate()>=s && now.getDate()<=e) : -1;
+    return { units, unitBudget, unitName, scopeText:isCurM?'本月':(+selM.slice(0,4))+' 年 '+(+selM.slice(5,7))+' 月', xTicks:units.map((_,i)=>i), nowIdx:cur<0?units.length-1:cur };
   }
 
   if(range==='m'){
@@ -7903,7 +7912,7 @@ function finChartSeries(range, gran){
       units[d-1].value+=x.amount; units[d-1].items.push(x);
     });
     const ticks=[1,5,10,15,20,25,days].filter((d,i,a)=>d<=days && a.indexOf(d)===i);
-    return { units, unitBudget, unitName, scopeText:'本月', xTicks:ticks.map(d=>d-1), nowIdx:now.getDate()-1 };
+    return { units, unitBudget, unitName, scopeText:isCurM?'本月':(+selM.slice(0,4))+' 年 '+(+selM.slice(5,7))+' 月', xTicks:ticks.map(d=>d-1), nowIdx: isCurM ? now.getDate()-1 : days-1 };
   }
 
   const yr= finYear>0 ? finYear : +ym.slice(0,4);
@@ -8019,6 +8028,17 @@ function renderFinChart(){
     yseg.style.display = range==='y' ? '' : 'none';
     const yv=document.getElementById('finYearVal');
     if(yv) yv.textContent = String(finYear>0?finYear:new Date().getFullYear());
+  }
+
+  // 月份切换（仅「月内」需要；已经在本月就不给往后翻）
+  const mseg=document.getElementById('finMonthSeg');
+  if(mseg){
+    const selM=finMonth||curYM();
+    mseg.style.display = range==='m' ? '' : 'none';
+    const mv=document.getElementById('finMonthVal');
+    if(mv) mv.textContent=selM;
+    const nx=mseg.querySelector('[data-d="1"]');
+    if(nx){ const atNow=selM>=curYM(); nx.disabled=atNow; nx.style.opacity=atNow?'.32':'1'; }
   }
 
   // 年趋势：独立视图，不参与粒度切换
@@ -8825,7 +8845,7 @@ function openImportModal(){
     <div class="field"><label>或上传账单文件（.csv / .txt，自动识别 UTF-8 / GBK）</label>
       <input id="fiFile" type="file" accept=".csv,.txt"></div>
     <div class="fin-import-preview" id="fiPreview"></div>
-    <div class="modal-foot"><button id="fiCancel">取消</button><button class="primary" id="fiParse">解析</button><button class="primary" id="fiGo" style="display:none">确认导入</button></div>`;
+    <div class="modal-foot"><button id="fiBillCancel">取消</button><button class="primary" id="fiParse">解析</button><button class="primary" id="fiGo" style="display:none">确认导入</button></div>`;
   mask.appendChild(modal); document.body.appendChild(mask);
   let parsed=null, cls=null;
   const pv=()=>document.getElementById('fiPreview');
@@ -8844,7 +8864,7 @@ function openImportModal(){
       ${dup?`<div class="fip-line warn">其中 ${dup} 笔与已有流水的「日期+金额」相同，可能是双记，导入后请核对</div>`:''}`;
     document.getElementById('fiGo').style.display='';
   }
-  document.getElementById('fiCancel').onclick=()=>mask.remove();
+  document.getElementById('fiBillCancel').onclick=()=>mask.remove();
   document.getElementById('fiParse').onclick=()=>{
     const txt=document.getElementById('fiText').value;
     parsed=parseBillText(txt);
@@ -10055,6 +10075,17 @@ function bindDomainButtons(){
     finYear=(b.dataset.d==='-1')?cur-1:cur+1;
     renderFinChart(); save();
   });
+  // 消费曲线：月份切换（仅「月内」显示；最多翻到本月，回到本月就清空状态）
+  const monthSeg=document.getElementById('finMonthSeg');
+  if(monthSeg) monthSeg.addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    const cur=finMonth||curYM();
+    const d=new Date(+cur.slice(0,4), +cur.slice(5,7)-1+(b.dataset.d==='-1'?-1:1), 1);
+    const next=isoOf(d).slice(0,7);
+    if(next>curYM()) return;
+    finMonth = (next===curYM()) ? '' : next;
+    renderFinChart(); save();
+  });
   // 消费曲线：粒度切换（按天/按5天 · 按月/按周，持久化）
   const granSeg=document.getElementById('finGranSeg');
   if(granSeg) granSeg.addEventListener('click',e=>{
@@ -10122,6 +10153,7 @@ function bindDomainButtons(){
   // === 数据备份 / 恢复 / 清空（铁律 2）—— 入口收进左下角「设置」弹窗 ===
   // 四个动作都会再开一层自己的确认/文件框，所以先关设置弹窗，避免两层遮罩叠在一起
   const SEA_CHANGES=[
+    {v:'2.11.0',d:'2026-11-01',n:'财务海域两件：①消费曲线「月内」能翻月份了 —— 标题右边多一组 ‹ ›，翻到哪个月天数就按哪个月算（2 月不会多画两天）、基准线和合计跟着走，最多翻到本月，选中的月份写进存档、刷新不回弹；②修「导入账单」按取消没反应 —— 取消按钮的 id 和岛屿卡弹窗撞了车，点了触发的是别人家的按钮（顺带把岛屿卡弹窗的取消也弄哑了）'},
     {v:'2.10.0',d:'2026-10-29',n:'数据从此有一个看得见的文件：设置 → 存档文件 → 绑定，选一个 sea-存档.json，之后每次改动 1.2 秒内自动整份写进去（右下角显示体积与写入时间）。清缓存 / 换电脑 / 放进网盘都能靠它救回。浏览器里那份仍是唯一真源、文件只是实时副本，所以不需要任何冲突仲裁；文件比本机新时才会自动载入，绝不静默用旧数据覆盖。仅 Edge / Chrome / 国产双核支持，Firefox 与手机静默降级为「没有文件」，功能一点不减'},
     {v:'2.9.0',d:'2026-10-29',n:'面向公开发布：①示例数据整块删除（第一次打开是干净空白盘，不再把作者的生活当演示）；②修掉存储型 XSS —— 岛屿名/卡名/说明/评语/凭证文件名等在拼进 innerHTML 与属性前统一转义，导入别人的备份不再能执行脚本；③附件地址加协议白名单，javascript: 一律置空；④首启不写盘，用户第一次录入才落存档'},
     {v:'2.8.6',d:'2026-10-29',n:'公开发布前的体检修复：①导出备份终于带上附件（v2.8 把附件剥离后，导出的 JSON 里一张图都没有，弹窗却写着「含成就凭证、影音封面」——换设备恢复会静默丢图）；②存档有效性判断不再用 14 项白名单（只用航线排训练的人，删空别的后刷新会被误判坏档、灌回示例）；③冷启动自愈改走 persist（原来直接把带图的整份 JSON 推云端，必撞 900KB 门禁，自愈从来没生效过）；④附件分片改大件优先装箱，装不下的明确提示而不是静默塞进最后一片；⑤hydrate 复用 STATE_KEYS，修「消费曲线看哪一年」刷新后回到今年；⑥示例数据里「六级通过」改名后引用没跟着改，成长流水第 2 条丢了目标关联；⑦存储探针不再缓存失败结果；⑧云端库 ID 不再写死在源码里（公开版自动降级为纯本地存档）；⑨成就凭证上传改成先压缩再存（原来一张 2MB 的图转 base64 是 2.7MB，两张就把浏览器约 4.75MB 的配额顶穿，之后所有保存都会失败）'},
