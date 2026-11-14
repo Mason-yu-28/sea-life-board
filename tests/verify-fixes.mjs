@@ -214,6 +214,50 @@ check('待分类队列 · 收入行显示 +¥ 且为红色',
 check('待分类队列 · 金额不出现双负号',
   !pend.some(r => r.amt.includes('--') || r.amt.includes('-¥-')), JSON.stringify(pend.map(r => r.amt)));
 
+// ——— 6.5 云端覆盖防护 + 滚动快照（v2.11.2）
+const mg = await page.evaluate(() => { try {
+  const local = {
+    collects: [{ id: 'c1', name: '本机1' }, { id: 'c2', name: '本机2' }, { id: 'c3', name: '只在本地' }],
+    bodies: [{ date: '2026-10-20', weight: 70 }, { date: '2026-11-01', weight: 71 }],
+    exps: [{ id: 'e1', amount: 10 }], islands: [],
+  };
+  const cloud = {
+    collects: [{ id: 'c1', name: '云端1' }, { id: 'c2', name: '云端2' }],
+    bodies: [{ date: '2026-10-20', weight: 70 }],
+    exps: [{ id: 'e1', amount: 10 }],
+  };
+  const r = mergeArchives(local, cloud);
+  return { kept: r.kept, names: r.out.collects.map(x => x.name), bodies: r.out.bodies.length,
+    cloudFirst: r.out.collects[0].name };
+} catch(e){ return {error:String(e)}; } });
+check('云端合并 · 本机独有的条目不会被删掉',
+  mg.kept === 2 && (mg.names||[]).includes('只在本地') && mg.bodies === 2, JSON.stringify(mg));
+check('云端合并 · 同 id 以云端为准', mg.cloudFirst === '云端1', JSON.stringify(mg.names));
+check('云端合并 · 不多不少（不重复追加已有条目）',
+  (mg.names||[]).filter(n => n === '云端2').length === 1 && (mg.names||[]).length === 3, JSON.stringify(mg.names));
+
+const ring = await page.evaluate(() => { try {
+  const d = { islands: [{ id: 'i1' }], collects: [{ id: 'c1' }, { id: 'c2' }],
+    exps: [{ id: 'e1' }], bodies: [{ date: '2026-10-20' }] };
+  const before = ringList().length;
+  const ok = ringPush(JSON.stringify(d));
+  const dup = ringPush(JSON.stringify(d));            // 同内容不该重复占位
+  const bad = ringPush('{}');                          // 无效存档不该占位
+  const after = ringList().length;
+  let maxCollects = 0;
+  ringList().forEach(m => {
+    try { maxCollects = Math.max(maxCollects, (JSON.parse(localStorage.getItem('sea_ring_' + m.at)).collects || []).length); } catch (e) {}
+  });
+  const best = ringBest();
+  return { before, ok, dup, bad, after, maxCollects, bestTotal: best ? best.total : 0,
+    counts: archCounts(d), capped: after <= 10 };
+} catch(e){ return {error:String(e)}; } });
+check('滚动快照 · 覆盖前的那份能被写进快照环',
+  ring.ok === true && ring.maxCollects >= 2, JSON.stringify(ring));
+check('滚动快照 · 同内容不重复占位、无效存档被拒',
+  ring.dup === false && ring.bad === false, JSON.stringify(ring));
+check('滚动快照 · 最多只留 10 份（不无限涨）', ring.capped === true, JSON.stringify(ring));
+
 // ——— 7. 八个视图 + 控制台
 check('运行期 · 没有未捕获异常', errs.length === 0, errs.join(' | '));
 

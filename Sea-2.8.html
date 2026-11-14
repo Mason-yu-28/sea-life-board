@@ -4,7 +4,7 @@
 <!-- Sea v2.8 · 2026-10-22 · ①存档拆开存（附件分片进 assets0..3，主数据约 10KB）②设置里加「本机存档」+ 一键切到只用本机；旧 v2.8.0/v2.8.1 合并；备注 · 设置里加「本机存档」+ 一键切到只用本机；v2.8.0 · 2026-10-22 · 附件与主数据分离：封面/简历/凭证按 600KB 分片存进 assets0..3，主数据永远小；v2.7.0 · 2026-10-22 · 训练统计改成按「天」：本周训练 = 练成天数 / 有安排天数（一天排几张都只算一天），热力图也是「那天这个部位全做完」才点亮；v2.6.0 · 2026-10-22 · 统计只认「练完」：热力图只点亮已完成（排了没做不算，鼠标停着仍能看到欠什么），本周训练与预警也只看完成；另外三个渲染出口（日历/岛屿池/航线池）统一补 save()，拖拽排期、右键排入、标记完成这些「只改内存就重画」的入口不会再因为 3 秒空窗丢数据；v2.5.1 · 2026-10-22 · 拖拽排期立刻落盘（原来只靠 3s 兜底，中途刷新会把排期丢掉、卡悄悄回卡池）、勾完成顺手刷健康页、热力图把「没有部位」的健康卡归到「其他」行、本周训练 hover 列出这一周算进来的卡；v2.5.0 · 2026-10-22 · 训练部位不再限定健康海域：健身内容挂在成长目标上时也能标部位，于是健康域的今日/热力图/本周训练都认它（流水同时照旧进成长）；v2.4.2 · 2026-10-21 · 健康「本周训练」加今日小字（今天 x/y，没排期直接说），训练卡判据改成「有部位 或 属健康海域」的并集，与热力图不再各算一套；v2.4.1 · 2026-10-21 · 热力图进页就把今天摆到中间（原来窗口从 5 周前起算，今天在第 31 列、在屏幕外，看着像没记录）；v2.4.0 · 2026-10-21 · 点击涟漪恢复正圆、仪表盘补成完整田字、日程里删卡只撤这次排期、影音观赏无框整封面且拖动不再被浏览器当文件拖、星级筛选补全 1–5、岛屿卡目标量只在铸造层出现、全站去掉输入框示例占位；v2.3.0 · 2026-10-21 · 航行日程按样张重做（七格细线、日期两行压线、卡改纸片：左侧脊线 + 第二行小字）；影音新增「观赏」（点卡片进 3D 展柜，与成就卡同一套）；v2.2.0 · 2026-10-21 · 职业/健康/航行三域收口（角色卡白底、指标五行、热力图日历、日程日期一19、专线环线两个蓝、航行卡说明栏）；v2.0.3 · 2026-10-19 · 金额输入框「记一笔」落回源文件：白底长条框 + ¥ 海青徽标（v12 改造此前只改线上未落盘，再发布即被源文件覆盖）；v2.0.2 = 修财务饼图丢数据；v2.0.1 = 修云端同步刷屏；v2.0.0 = 手机端底部 7 Tab + 全站单列 + 点击弹菜单（代右键）；v1.1.0 = 数据上云双端同步；v1.0.5 = 更名版本号机制；v1.0.4 = 存档提示文案指向发布链接；v1.0.3 = 存档探针；v1.0.2 = 修热力图四处渲染错位；v1.0.1 = 热力图改回横轴日历；v1.0 = 12 条大改。历史版本在 Sea-备份/ -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="version" content="2.11.1">
+<meta name="version" content="2.11.2">
 <title>Sea-life-board</title>
 <style>
 :root{
@@ -3336,7 +3336,7 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
       <button id="btnLocalMode">切到本机</button>
     </div>
     <div class="set-ver">
-      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.11.1</span></div>
+      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.11.2</span></div>
       <div class="sv-row"><span>云端同步</span><span class="sv-v" id="setCloudState">检测中…</span></div>
       <ul class="sv-log" id="setChangelog"></ul>
     </div>
@@ -3729,6 +3729,89 @@ function snapshotLocal(){
     localStorage.setItem(SNAP_AT, String(Date.now()));
   }catch(e){ /* 配额不够就算了，绝不能影响启动 */ }
 }
+// === 滚动快照（v2.11.2）===
+// 事故背景：上面的快照只拍一次（SNAP_AT 存在就 return），第一次之后被云端旧档覆盖就再也找不回来。
+// 2026-11-14 查出来的「秘宝 30 多部只剩 12 部、身体记录 2 条剩 1 条」就是这个问题：没有可回滚的副本。
+// 现在改成滚动保留最近 10 份主数据（附件不进去，主数据本身只有几十 KB），覆盖前必定先留一份。
+const RING_IDX='sea_ring_idx', RING_PFX='sea_ring_', RING_MAX=10;
+const RING_COUNT_KEYS=['islands','sails','achieves','collects','works','routes','exps','incs',
+  'bodies','grows','reviews','materials','savings','pendingTxns','cvVersions','careerAchieves'];
+function archCounts(d){
+  const c={}; let total=0;
+  RING_COUNT_KEYS.forEach(function(k){
+    const n=(d && Array.isArray(d[k]))?d[k].length:0; c[k]=n; total+=n;
+  });
+  return {total:total, c:c};
+}
+function ringList(){
+  try{ const a=JSON.parse(localStorage.getItem(RING_IDX)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; }
+}
+function ringPush(mainJson){
+  try{
+    if(!mainJson) return false;
+    const d=JSON.parse(mainJson);
+    if(!validArchive(d)) return false;
+    const idx=ringList();
+    // 与最新一份完全一样就不重复占位
+    if(idx.length){
+      const lastRaw=localStorage.getItem(RING_PFX+idx[idx.length-1].at);
+      if(lastRaw===mainJson) return false;
+    }
+    const at=Date.now();
+    localStorage.setItem(RING_PFX+at, mainJson);
+    const cnt=archCounts(d);
+    idx.push({at:at, total:cnt.total, collects:cnt.c.collects, exps:cnt.c.exps, islands:cnt.c.islands});
+    // 大存档（流水几千笔那种）只留 3 份，别把 localStorage 配额吃光
+    const maxKeep = mainJson.length>200000 ? 3 : RING_MAX;
+    while(idx.length>maxKeep){
+      const old=idx.shift();
+      try{ localStorage.removeItem(RING_PFX+old.at); }catch(e){}
+    }
+    localStorage.setItem(RING_IDX, JSON.stringify(idx));
+    return true;
+  }catch(e){ return false; }   // 配额不够就算了，绝不能影响启动
+}
+function ringBest(){
+  let best=null;
+  ringList().forEach(function(m){
+    let raw=null; try{ raw=localStorage.getItem(RING_PFX+m.at); }catch(e){ return; }
+    if(!raw) return;
+    let t=0; try{ t=archCounts(JSON.parse(raw)).total; }catch(e){ return; }
+    if(!best || t>best.total) best={at:m.at, total:t, raw:raw};
+  });
+  return best;
+}
+// === 并集合并（v2.11.2）===
+// 云端这份比本机少条目时（旧档、乱序回声、另一台设备的旧副本），绝不能整份覆盖本机。
+// 规则：云端为底（同 id 以云端为准），本机多出来的条目原样保留；blankStart 的主动清空不参与合并。
+// 取舍：宁可让「别处删掉的条目复活」，也不让条目凭空消失 —— 丢数据的代价远大于多一条。
+const MERGE_KEYS=RING_COUNT_KEYS;
+function itemKey(x){
+  if(x && typeof x==='object'){
+    if(x.id) return 'id:'+x.id;
+    if(x.date) return 'd:'+x.date+'|'+(x.amount!==undefined?x.amount:(x.content||''));
+  }
+  try{ return 'j:'+JSON.stringify(x); }catch(e){ return 'j:'+String(x); }
+}
+function mergeArchives(local, cloud){
+  const out=Object.assign({}, cloud);
+  let kept=0;
+  MERGE_KEYS.forEach(function(k){
+    const lv=local&&local[k], cv=cloud&&cloud[k];
+    if(!Array.isArray(lv) || !lv.length) return;
+    if(!Array.isArray(cv)){
+      if(cv===undefined || cv===null){ out[k]=lv; kept+=lv.length; }
+      return;
+    }
+    const have=new Set(cv.map(itemKey));
+    const extra=lv.filter(function(x){ return !have.has(itemKey(x)); });
+    if(extra.length){ out[k]=cv.concat(extra); kept+=extra.length; }
+  });
+  Object.keys(local||{}).forEach(function(k){
+    if(out[k]===undefined && local[k]!==undefined) out[k]=local[k];
+  });
+  return {out:out, kept:kept};
+}
 function loadStore(){
   try{
     const raw=localStorage.getItem(STORE_KEY);
@@ -4111,15 +4194,36 @@ function cloudApply(jsonStr, updatedAt){
     let local=null; try{ local=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){}
     if(validArchive(local)) return false;
   }
-  try{ hydrate(d); }catch(e){ return false; }
+  // ⑤ v2.11.2：覆盖前先留一份滚动快照；云端比本机少条目时只并集、不删除
+  let target=d, mergedCount=0;
+  try{
+    const rawLocal=localStorage.getItem(STORE_KEY);
+    ringPush(rawLocal);                        // 先把「即将被覆盖的这份」存进快照环
+    let local=null; try{ local=rawLocal?JSON.parse(rawLocal):null; }catch(e){}
+    // blankStart = 用户主动清空过：合并会把清掉的东西拉回来，所以这份不参与合并
+    if(validArchive(local) && !d.blankStart){
+      const mg=mergeArchives(local, d);
+      if(mg.kept>0){ target=mg.out; mergedCount=mg.kept; }
+    }
+  }catch(e){}
+  try{ hydrate(target); }catch(e){ return false; }
   _cloudLastJson=jsonStr;
   if(num) _cloudUpdatedAt=num;
-  _localSavedAt=+d.savedAt||num;
+  _localSavedAt=+(target.savedAt||d.savedAt)||num;
   _localDemo=false;
   _lastDataJson=JSON.stringify(buildData());
   _cloudLive=true;
-  try{ localStorage.setItem(STORE_KEY, jsonStr); }catch(e){}
+  try{
+    localStorage.setItem(STORE_KEY, mergedCount
+      ? JSON.stringify(Object.assign({}, target, {savedAt:Date.now()}))
+      : jsonStr);
+  }catch(e){}
   setSave('ok');
+  if(mergedCount){
+    // 并集比云端多 → 立刻回传，否则下一次载入又被旧档冲回去
+    setTimeout(function(){ try{ persistForce(); }catch(e){} }, 500);
+    try{ toast('云端少了 '+mergedCount+' 条，已保留本机那份并回传'); }catch(e){}
+  }
   return true;
 }
 function cloudSubscribe(){
@@ -4402,6 +4506,7 @@ function hideFilePerm(){ const el=document.getElementById('filePerm'); if(el) el
   snapshotLocal();          // 先拍本机快照，再让云端进来（顺序不能反）
   const had = loadStore();
   if(!had){ resetMemory(); blankStart=true; }   // 不写盘：用户第一次真正录入时才落存档
+  try{ if(had) ringPush(localStorage.getItem(STORE_KEY)); }catch(e){}   // 每次启动都留一份滚动快照
   if(!storeProbe()) showStoreWarn();
   try{ await fileRestore(); }catch(e){ console.warn('[file] restore',e); }
   // 「只看本机存档」：救数据时用 —— 跳过云端拉取（否则云端会立刻覆盖本机那份）
@@ -10156,6 +10261,7 @@ function bindDomainButtons(){
   // === 数据备份 / 恢复 / 清空（铁律 2）—— 入口收进左下角「设置」弹窗 ===
   // 四个动作都会再开一层自己的确认/文件框，所以先关设置弹窗，避免两层遮罩叠在一起
   const SEA_CHANGES=[
+    {v:'2.11.2',d:'2026-11-14',n:'堵住「云端旧档覆盖本机新数据」这个一直没堵的口子，同时给所有覆盖动作留后路：①启动快照从「一辈子只拍一张」改成滚动 10 份（大存档留 3 份），每次启动与每次云端覆盖前都留一份；②云端这份比本机少条目时不再整份覆盖——同 id 以云端为准，本机多出来的条目全部保留，并立刻回传云端（清空数据 blankStart 的除外，那是主动清空）；③设置里新增「历史快照·回滚」，一键回到条目最多的那一份，回滚前会把当前这份也存下（反悔能切回）。这条是冲着 2026-11-14 查出来的事故：秘宝 30 多部只剩 12 部、身体记录 2 条剩 1 条，而旧快照机制只拍过一次、根本没东西可回滚'},
     {v:'2.11.1',d:'2026-11-14',n:'修「待分类队列」金额永远显示成绿色负数：队列项只存 expId、不存方向，渲染时没回流水里查，于是收入条目也被当成支出画成「-¥xx / 绿」。现在按 expId 反查方向，收入显示「+¥xx / 红」（与流水行同一口径），支出仍是「-¥xx / 绿」；顺带对金额取绝对值，旧数据里若存成负数不会再出现「-¥-xx」'},
     {v:'2.11.0',d:'2026-11-01',n:'财务海域两件：①消费曲线「月内」能翻月份了 —— 标题右边多一组 ‹ ›，翻到哪个月天数就按哪个月算（2 月不会多画两天）、基准线和合计跟着走，最多翻到本月，选中的月份写进存档、刷新不回弹；②修「导入账单」按取消没反应 —— 取消按钮的 id 和岛屿卡弹窗撞了车，点了触发的是别人家的按钮（顺带把岛屿卡弹窗的取消也弄哑了）'},
     {v:'2.10.0',d:'2026-10-29',n:'数据从此有一个看得见的文件：设置 → 存档文件 → 绑定，选一个 sea-存档.json，之后每次改动 1.2 秒内自动整份写进去（右下角显示体积与写入时间）。清缓存 / 换电脑 / 放进网盘都能靠它救回。浏览器里那份仍是唯一真源、文件只是实时副本，所以不需要任何冲突仲裁；文件比本机新时才会自动载入，绝不静默用旧数据覆盖。仅 Edge / Chrome / 国产双核支持，Firefox 与手机静默降级为「没有文件」，功能一点不减'},
@@ -10212,11 +10318,44 @@ function bindDomainButtons(){
     el.textContent = t+' · 影音 '+(d.collects||[]).length+' · 航行卡 '+(d.sails||[]).length
       +' · 目标 '+(d.islands||[]).length+' · 流水 '+(d.exps||[]).length+' 条'+(on?'（当前只用本机）':'');
   }
+  // 历史快照：滚动 10 份，显示最全那份，点「回滚」直接恢复到它
+  // 这一行由 JS 造：线上件每行都带平台锚点注释，直接改 HTML 会被页面事务拦下
+  function ensureRingRow(){
+    if(document.getElementById('ringSnapInfo')){ wireRingBtn(); return; }
+    const anchor=document.getElementById('localSnapInfo');
+    const host=anchor && anchor.closest('.set-row');
+    if(!host || !host.parentNode) return;
+    const row=document.createElement('div');
+    row.className='set-row';
+    row.innerHTML='<div><div class="st">历史快照</div><div class="sd" id="ringSnapInfo">—</div></div>'
+      +'<button id="btnRingSnap">回滚</button>';
+    host.parentNode.insertBefore(row, host.nextSibling);
+    wireRingBtn();
+  }
+  function wireRingBtn(){
+    const btn=document.getElementById('btnRingSnap');
+    if(!btn || btn.dataset.wired==='1') return;
+    btn.dataset.wired='1';
+    btn.onclick=ringRollback;
+  }
+  function paintRingSnap(){
+    ensureRingRow();
+    const el=document.getElementById('ringSnapInfo'); if(!el) return;
+    const list=ringList();
+    if(!list.length){ el.textContent='还没有快照 · 每次启动/云端覆盖前自动留一份'; return; }
+    const best=ringBest();
+    const t=best? new Date(best.at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+    let cur=0;
+    try{ cur=archCounts(JSON.parse(localStorage.getItem(STORE_KEY)||'{}')).total; }catch(e){}
+    el.textContent = '已存 '+list.length+' 份 · 最全一份是 '+t+' 共 '+(best?best.total:0)
+      +' 条（当前 '+cur+' 条）'+(best && best.total>cur?' · 比当前更全，可回滚':'');
+  }
   document.getElementById('openSettings').onclick=()=>{
     const log=document.getElementById('setChangelog');
     if(log) log.innerHTML=SEA_CHANGES.slice(0,5).map(c=>`<li><b>${c.v}</b>${c.d} · ${c.n}</li>`).join('');
     updateCloudStateUI();
     paintLocalSnap();
+    paintRingSnap();
     paintFileState();
     openModal('modalSettings');
   };
@@ -10251,6 +10390,28 @@ function bindDomainButtons(){
     }
     setTimeout(()=>location.reload(), 700);
   };
+  // 「回滚」：直接恢复到历史快照里条目最多的那一份（不用挑，不用记时间）
+  function ringRollback(){
+    const best=ringBest();
+    if(!best){ toast('还没有历史快照'); return; }
+    let cur={total:0, c:{}};
+    try{ cur=archCounts(JSON.parse(localStorage.getItem(STORE_KEY)||'{}')); }catch(e){}
+    if(best.total<=cur.total){ toast('历史快照都不比当前更全（当前 '+cur.total+' 条）'); return; }
+    let d={}; try{ d=JSON.parse(best.raw); }catch(e){}
+    const t=new Date(best.at).toLocaleString('zh-CN');
+    const cnt=archCounts(d);
+    if(!confirm('回滚到历史快照？\n\n· 快照时间 '+t
+      +'\n· 共 '+best.total+' 条（当前 '+cur.total+' 条）'
+      +'\n· 影音 '+cnt.c.collects+' 部 · 目标 '+cnt.c.islands+' 个 · 流水 '+cnt.c.exps+' 笔'
+      +'\n· 身体记录 '+cnt.c.bodies+' 条'
+      +'\n\n页面会重载；回滚后的数据会作为最新一份回传云端。')) return;
+    try{
+      ringPush(localStorage.getItem(STORE_KEY));       // 回滚前把当前这份也存下来，反悔还能再切回
+      localStorage.setItem(STORE_KEY, best.raw);
+    }catch(e){ toast('写入失败：浏览器存储可能已满'); return; }
+    toast('已回滚到 '+t+' 的快照，正在重载…');
+    setTimeout(()=>location.reload(), 700);
+  }
   document.getElementById('setClose').onclick=setClose;
   document.getElementById('btnExport').onclick=()=>{ setClose(); openDataExport(); };
   document.getElementById('btnImport').onclick=()=>{ setClose(); openDataImport(); };
