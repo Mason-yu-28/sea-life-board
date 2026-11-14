@@ -187,6 +187,33 @@ check('消费曲线 · 翻月后合计按所选月份', !mon.err && mon.legend.i
   mon.err || `图例：${(mon.legend || '').slice(0, 40)}`);
 check('消费曲线 · 停在本月时不再给往后翻', !mon.err && mon.nxOff === true, mon.err || `› ${mon.nxOff ? '已禁用' : '仍可点'}`);
 
+// ——— 6.6 待分类队列的金额方向（v2.11.1）
+// 队列项只存 expId、不存方向，渲染时以前一律按支出画（负号 + 绿），收入条目也跟着变绿负数。
+const pend = await page.evaluate(() => {
+  exps.length = 0; incs.length = 0; pendingTxns.length = 0;
+  const outRow = { id: 'p-out', date: '2026-11-14', cat: '未分类', amount: 15, merchant: '夹具支出', src: '导入' };
+  const inRow = { id: 'p-in', date: '2026-11-14', cat: '未分类', amount: 88, merchant: '夹具收入', src: '导入' };
+  exps.push(outRow); incs.push(inRow);
+  syncPendingFor(outRow); syncPendingFor(inRow);
+  renderPending();
+  return [...document.querySelectorAll('#pendingList .pending-row')].map(r => {
+    const a = r.querySelector('.pr-amt');
+    return { name: r.querySelector('.pr-name').textContent, amt: a.textContent.trim(),
+      cls: a.className, color: getComputedStyle(a).color };
+  });
+});
+const pOut = pend.find(r => r.name.includes('夹具支出')) || {};
+const pIn = pend.find(r => r.name.includes('夹具收入')) || {};
+const RED = 'rgb(180, 64, 47)', GREEN = 'rgb(63, 115, 85)';
+check('待分类队列 · 支出行显示 -¥ 且为绿色',
+  (pOut.amt || '').startsWith('-') && /(^|\s)out(\s|$)/.test(pOut.cls || '') && pOut.color === GREEN,
+  JSON.stringify(pOut));
+check('待分类队列 · 收入行显示 +¥ 且为红色',
+  (pIn.amt || '').startsWith('+') && /(^|\s)in(\s|$)/.test(pIn.cls || '') && pIn.color === RED,
+  JSON.stringify(pIn));
+check('待分类队列 · 金额不出现双负号',
+  !pend.some(r => r.amt.includes('--') || r.amt.includes('-¥-')), JSON.stringify(pend.map(r => r.amt)));
+
 // ——— 7. 八个视图 + 控制台
 check('运行期 · 没有未捕获异常', errs.length === 0, errs.join(' | '));
 

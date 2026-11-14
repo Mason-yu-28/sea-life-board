@@ -4,7 +4,7 @@
 <!-- Sea v2.8 · 2026-10-22 · ①存档拆开存（附件分片进 assets0..3，主数据约 10KB）②设置里加「本机存档」+ 一键切到只用本机；旧 v2.8.0/v2.8.1 合并；备注 · 设置里加「本机存档」+ 一键切到只用本机；v2.8.0 · 2026-10-22 · 附件与主数据分离：封面/简历/凭证按 600KB 分片存进 assets0..3，主数据永远小；v2.7.0 · 2026-10-22 · 训练统计改成按「天」：本周训练 = 练成天数 / 有安排天数（一天排几张都只算一天），热力图也是「那天这个部位全做完」才点亮；v2.6.0 · 2026-10-22 · 统计只认「练完」：热力图只点亮已完成（排了没做不算，鼠标停着仍能看到欠什么），本周训练与预警也只看完成；另外三个渲染出口（日历/岛屿池/航线池）统一补 save()，拖拽排期、右键排入、标记完成这些「只改内存就重画」的入口不会再因为 3 秒空窗丢数据；v2.5.1 · 2026-10-22 · 拖拽排期立刻落盘（原来只靠 3s 兜底，中途刷新会把排期丢掉、卡悄悄回卡池）、勾完成顺手刷健康页、热力图把「没有部位」的健康卡归到「其他」行、本周训练 hover 列出这一周算进来的卡；v2.5.0 · 2026-10-22 · 训练部位不再限定健康海域：健身内容挂在成长目标上时也能标部位，于是健康域的今日/热力图/本周训练都认它（流水同时照旧进成长）；v2.4.2 · 2026-10-21 · 健康「本周训练」加今日小字（今天 x/y，没排期直接说），训练卡判据改成「有部位 或 属健康海域」的并集，与热力图不再各算一套；v2.4.1 · 2026-10-21 · 热力图进页就把今天摆到中间（原来窗口从 5 周前起算，今天在第 31 列、在屏幕外，看着像没记录）；v2.4.0 · 2026-10-21 · 点击涟漪恢复正圆、仪表盘补成完整田字、日程里删卡只撤这次排期、影音观赏无框整封面且拖动不再被浏览器当文件拖、星级筛选补全 1–5、岛屿卡目标量只在铸造层出现、全站去掉输入框示例占位；v2.3.0 · 2026-10-21 · 航行日程按样张重做（七格细线、日期两行压线、卡改纸片：左侧脊线 + 第二行小字）；影音新增「观赏」（点卡片进 3D 展柜，与成就卡同一套）；v2.2.0 · 2026-10-21 · 职业/健康/航行三域收口（角色卡白底、指标五行、热力图日历、日程日期一19、专线环线两个蓝、航行卡说明栏）；v2.0.3 · 2026-10-19 · 金额输入框「记一笔」落回源文件：白底长条框 + ¥ 海青徽标（v12 改造此前只改线上未落盘，再发布即被源文件覆盖）；v2.0.2 = 修财务饼图丢数据；v2.0.1 = 修云端同步刷屏；v2.0.0 = 手机端底部 7 Tab + 全站单列 + 点击弹菜单（代右键）；v1.1.0 = 数据上云双端同步；v1.0.5 = 更名版本号机制；v1.0.4 = 存档提示文案指向发布链接；v1.0.3 = 存档探针；v1.0.2 = 修热力图四处渲染错位；v1.0.1 = 热力图改回横轴日历；v1.0 = 12 条大改。历史版本在 Sea-备份/ -->
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="version" content="2.11.0">
+<meta name="version" content="2.11.1">
 <title>Sea-life-board</title>
 <style>
 :root{
@@ -2171,6 +2171,7 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
 .exp-row .ex-amt.out{color:var(--green)}
 .exp-row .ex-amt.in{color:var(--red)}
 .pending-row .pr-amt{color:var(--green)}
+.pending-row .pr-amt.in{color:var(--red)}   /* 待分类队列里的收入条目：红，与流水行同口径 */
 
 /* —— 原来用红做强调的地方，归到海青 —— */
 .brand-mark{border-color:var(--sea);color:var(--sea)}
@@ -3335,7 +3336,7 @@ body.is-dragging .slot::after,body.is-dragging .route-slot::after{content:'';pos
       <button id="btnLocalMode">切到本机</button>
     </div>
     <div class="set-ver">
-      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.11.0</span></div>
+      <div class="sv-row"><span>当前版本</span><span class="sv-v" id="setVerNum">2.11.1</span></div>
       <div class="sv-row"><span>云端同步</span><span class="sv-v" id="setCloudState">检测中…</span></div>
       <ul class="sv-log" id="setChangelog"></ul>
     </div>
@@ -8310,10 +8311,12 @@ function renderPending(){
   if(pendPage>=pages) pendPage=pages-1;
   if(pendPage<0) pendPage=0;
   rows.slice(pendPage*per, pendPage*per+per).forEach(it=>{
+    // 队列项只存 expId、不存方向，方向要回流水里查（2026-11-14：以前一律当支出渲染，收入条目也显示成绿色负数）
+    const isInc = !!it.expId && incs.some(x=>x.id===it.expId);
     const row=document.createElement('div'); row.className='pending-row';
     row.innerHTML=`<span class="pr-date">${String(it.date||'').slice(5)}</span>
       <span class="pr-name">${finEsc(it.merchant||'—')}${it.item?' · '+finEsc(it.item):''}</span>
-      <span class="pr-amt">-${fmtY(it.amount,2)}</span>
+      <span class="pr-amt ${isInc?'in':'out'}">${isInc?'+':'-'}${fmtY(Math.abs(Number(it.amount)||0),2)}</span>
       <span class="fin-act"><button class="pri" data-a="go">指派类别</button><button data-a="del">忽略</button></span>`;
     row.querySelector('[data-a=go]').onclick=()=>openClassifyModal(it);
     row.querySelector('[data-a=del]').onclick=()=>{
@@ -10153,6 +10156,7 @@ function bindDomainButtons(){
   // === 数据备份 / 恢复 / 清空（铁律 2）—— 入口收进左下角「设置」弹窗 ===
   // 四个动作都会再开一层自己的确认/文件框，所以先关设置弹窗，避免两层遮罩叠在一起
   const SEA_CHANGES=[
+    {v:'2.11.1',d:'2026-11-14',n:'修「待分类队列」金额永远显示成绿色负数：队列项只存 expId、不存方向，渲染时没回流水里查，于是收入条目也被当成支出画成「-¥xx / 绿」。现在按 expId 反查方向，收入显示「+¥xx / 红」（与流水行同一口径），支出仍是「-¥xx / 绿」；顺带对金额取绝对值，旧数据里若存成负数不会再出现「-¥-xx」'},
     {v:'2.11.0',d:'2026-11-01',n:'财务海域两件：①消费曲线「月内」能翻月份了 —— 标题右边多一组 ‹ ›，翻到哪个月天数就按哪个月算（2 月不会多画两天）、基准线和合计跟着走，最多翻到本月，选中的月份写进存档、刷新不回弹；②修「导入账单」按取消没反应 —— 取消按钮的 id 和岛屿卡弹窗撞了车，点了触发的是别人家的按钮（顺带把岛屿卡弹窗的取消也弄哑了）'},
     {v:'2.10.0',d:'2026-10-29',n:'数据从此有一个看得见的文件：设置 → 存档文件 → 绑定，选一个 sea-存档.json，之后每次改动 1.2 秒内自动整份写进去（右下角显示体积与写入时间）。清缓存 / 换电脑 / 放进网盘都能靠它救回。浏览器里那份仍是唯一真源、文件只是实时副本，所以不需要任何冲突仲裁；文件比本机新时才会自动载入，绝不静默用旧数据覆盖。仅 Edge / Chrome / 国产双核支持，Firefox 与手机静默降级为「没有文件」，功能一点不减'},
     {v:'2.9.0',d:'2026-10-29',n:'面向公开发布：①示例数据整块删除（第一次打开是干净空白盘，不再把作者的生活当演示）；②修掉存储型 XSS —— 岛屿名/卡名/说明/评语/凭证文件名等在拼进 innerHTML 与属性前统一转义，导入别人的备份不再能执行脚本；③附件地址加协议白名单，javascript: 一律置空；④首启不写盘，用户第一次录入才落存档'},
